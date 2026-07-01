@@ -746,25 +746,38 @@
       // Use setTimeout to allow UI to update before heavy work
       setTimeout(function() {
         try {
-          // 1. Clone the preview element
-          var clone = cvPreview.cloneNode(true);
+          // 1. Create a dedicated on-screen wrapper that html2canvas can render reliably.
+          //    Previous approaches failed because:
+          //    - left:-9999px  → getBoundingClientRect() returns negative coords → html2canvas clips as out-of-bounds
+          //    - z-index:-1    → element sits behind body's background paint layer → html2canvas captures blank background
+          //    The robust approach: a wrapper fixed at (0,0) with high z-index and solid white background,
+          //    so html2canvas sees a clean, in-viewport surface. The wrapper is removed immediately after save.
+          var wrapper = document.createElement('div');
+          wrapper.style.cssText = [
+            'position: fixed',
+            'top: 0',
+            'left: 0',
+            'z-index: 2147483647',  // max safe z-index — above everything
+            'width: ' + A4_WIDTH_PX + 'px',
+            'background: #ffffff',
+            'overflow: visible'
+          ].join('; ') + ';';
 
-          // 2. Style the clone for measurement: in-viewport but hidden behind all content.
-          //    Using left:-9999px causes html2canvas to produce blank output because
-          //    getBoundingClientRect() reports an off-screen rectangle that html2canvas
-          //    clips as out-of-bounds. Instead, position at the viewport origin with a
-          //    negative z-index so it stays behind the body background and all content.
-          clone.style.position = 'fixed';
-          clone.style.top = '0';
-          clone.style.left = '0';
-          clone.style.zIndex = '-1';
+          // 2. Clone the live preview and place inside the wrapper
+          var clone = cvPreview.cloneNode(true);
+          clone.style.position = 'static';   // let wrapper control positioning
+          clone.style.top = 'auto';
+          clone.style.left = 'auto';
+          clone.style.zIndex = 'auto';
           clone.style.pointerEvents = 'none';
           clone.style.width = A4_WIDTH_PX + 'px';
           clone.style.visibility = 'visible';
           clone.style.display = 'block';
           clone.style.boxShadow = 'none';
           clone.style.margin = '0';
-          document.body.appendChild(clone);
+          clone.removeAttribute('id');       // avoid duplicate id in DOM
+          wrapper.appendChild(clone);
+          document.body.appendChild(wrapper);
 
           // 3. Reset scaling variables
           var currentFontSize = DEFAULT_FONT_SIZE;
@@ -803,6 +816,9 @@
               // Set final explicit dimensions on clone for html2pdf
               clone.style.width = A4_WIDTH_PX + 'px';
               clone.style.minHeight = 'auto';
+              // Ensure wrapper matches clone dimensions for clean html2canvas capture
+              wrapper.style.width = A4_WIDTH_PX + 'px';
+              wrapper.style.height = clone.offsetHeight + 'px';
 
               var opt = {
                 margin: 0,
@@ -811,13 +827,13 @@
                 html2canvas: {
                   scale: 2,
                   useCORS: true,
-                  letterRendering: true,
+                  backgroundColor: '#ffffff',
                   x: 0,
                   y: 0,
                   scrollX: 0,
                   scrollY: 0,
                   windowWidth: A4_WIDTH_PX,
-                  windowHeight: A4_HEIGHT_PX
+                  windowHeight: Math.max(A4_HEIGHT_PX, clone.offsetHeight)
                 },
                 jsPDF: {
                   unit: 'px',
@@ -827,14 +843,15 @@
                 pagebreak: { mode: ['avoid-all'] }
               };
 
-              html2pdf().set(opt).from(clone).save().then(function() {
+              // Render from the wrapper so html2canvas has a clean, on-screen container
+              html2pdf().set(opt).from(wrapper).save().then(function() {
                 // Cleanup
-                if (clone.parentNode) clone.parentNode.removeChild(clone);
+                if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
                 btnDownload.disabled = false;
                 btnDownload.innerHTML = '<svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
                 console.log('GOFLOW: PDF generated successfully. Font size used: ' + currentFontSize.toFixed(1) + 'px, Padding: ' + currentPadding + 'px, Iterations: ' + iterations);
               }).catch(function(err) {
-                if (clone.parentNode) clone.parentNode.removeChild(clone);
+                if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
                 btnDownload.disabled = false;
                 btnDownload.innerHTML = '<svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
                 console.error('GOFLOW: PDF generation failed:', err);
