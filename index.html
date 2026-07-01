@@ -749,10 +749,16 @@
           // 1. Clone the preview element
           var clone = cvPreview.cloneNode(true);
 
-          // 2. Style the clone for measurement: off-screen, explicit dimensions
-          clone.style.position = 'absolute';
-          clone.style.left = '-9999px';
+          // 2. Style the clone for measurement: in-viewport but hidden behind all content.
+          //    Using left:-9999px causes html2canvas to produce blank output because
+          //    getBoundingClientRect() reports an off-screen rectangle that html2canvas
+          //    clips as out-of-bounds. Instead, position at the viewport origin with a
+          //    negative z-index so it stays behind the body background and all content.
+          clone.style.position = 'fixed';
           clone.style.top = '0';
+          clone.style.left = '0';
+          clone.style.zIndex = '-1';
+          clone.style.pointerEvents = 'none';
           clone.style.width = A4_WIDTH_PX + 'px';
           clone.style.visibility = 'visible';
           clone.style.display = 'block';
@@ -805,7 +811,13 @@
                 html2canvas: {
                   scale: 2,
                   useCORS: true,
-                  letterRendering: true
+                  letterRendering: true,
+                  x: 0,
+                  y: 0,
+                  scrollX: 0,
+                  scrollY: 0,
+                  windowWidth: A4_WIDTH_PX,
+                  windowHeight: A4_HEIGHT_PX
                 },
                 jsPDF: {
                   unit: 'px',
