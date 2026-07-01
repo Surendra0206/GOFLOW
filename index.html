@@ -746,46 +746,40 @@
       // Use setTimeout to allow UI to update before heavy work
       setTimeout(function() {
         try {
-          // 1. Create a dedicated on-screen wrapper that html2canvas can render reliably.
-          //    Previous approaches failed because:
-          //    - left:-9999px  → getBoundingClientRect() returns negative coords → html2canvas clips as out-of-bounds
-          //    - z-index:-1    → element sits behind body's background paint layer → html2canvas captures blank background
-          //    The robust approach: a wrapper fixed at (0,0) with high z-index and solid white background,
-          //    so html2canvas sees a clean, in-viewport surface. The wrapper is removed immediately after save.
-          var wrapper = document.createElement('div');
-          wrapper.style.cssText = [
-            'position: fixed',
-            'top: 0',
-            'left: 0',
-            'z-index: 2147483647',  // max safe z-index — above everything
-            'width: ' + A4_WIDTH_PX + 'px',
-            'background: #ffffff',
-            'overflow: visible'
-          ].join('; ') + ';';
-
-          // 2. Clone the live preview and place inside the wrapper
+          // Clone the live preview element.  We render the clone directly (no wrapper)
+          // because html2canvas handles position:absolute more reliably than
+          // position:fixed when custom windowWidth/windowHeight options are used.
+          // Previous wrapper-based approaches produced blank PDFs because
+          // position:fixed elements are anchored to the real viewport, but
+          // html2canvas simulates a virtual viewport that misaligns them.
           var clone = cvPreview.cloneNode(true);
-          clone.style.position = 'static';   // let wrapper control positioning
-          clone.style.top = 'auto';
-          clone.style.left = 'auto';
-          clone.style.zIndex = 'auto';
-          clone.style.pointerEvents = 'none';
-          clone.style.width = A4_WIDTH_PX + 'px';
-          clone.style.visibility = 'visible';
-          clone.style.display = 'block';
-          clone.style.boxShadow = 'none';
-          clone.style.margin = '0';
-          clone.removeAttribute('id');       // avoid duplicate id in DOM
-          wrapper.appendChild(clone);
-          document.body.appendChild(wrapper);
+          clone.removeAttribute('id'); // avoid duplicate id in DOM
 
-          // 3. Reset scaling variables
+          // Position absolutely at the top-left of the document.
+          // The initial containing block (viewport) serves as the reference
+          // since no ancestor has position other than static.
+          clone.style.position = 'absolute';
+          clone.style.top = '0';
+          clone.style.left = '0';
+          clone.style.zIndex = '2147483647'; // above all page content
+          clone.style.width = A4_WIDTH_PX + 'px';
+          clone.style.margin = '0';
+          clone.style.boxShadow = 'none';
+          clone.style.visibility = 'visible';
+          clone.style.pointerEvents = 'none';
+
+          // Reset scaling variables
           var currentFontSize = DEFAULT_FONT_SIZE;
           var currentPadding = DEFAULT_PADDING;
           clone.style.fontSize = currentFontSize + 'px';
           clone.style.padding = currentPadding + 'px';
 
-          // 4. Auto-scale loop
+          document.body.appendChild(clone);
+
+          // Ensure the clone is visible in the current viewport
+          window.scrollTo(0, 0);
+
+          // Auto-scale loop
           var iterations = 0;
           var maxIterations = 200; // safety cap
 
@@ -799,12 +793,10 @@
               clone.style.padding = currentPadding + 'px';
               iterations++;
 
-              // Log warning when floor is reached
               if (currentFontSize <= MIN_FONT_SIZE) {
                 console.warn('GOFLOW: Auto-scaling reached minimum font size floor (8pt). Content may be too long for a single page.');
               }
 
-              // Use requestAnimationFrame to allow reflow
               requestAnimationFrame(measureAndScale);
             } else {
               // Scaling complete — generate PDF
@@ -813,12 +805,12 @@
                 console.warn('GOFLOW: Content still exceeds one page at minimum font size. PDF may clip or overflow.');
               }
 
-              // Set final explicit dimensions on clone for html2pdf
+              // Lock final dimensions
               clone.style.width = A4_WIDTH_PX + 'px';
-              clone.style.minHeight = 'auto';
-              // Ensure wrapper matches clone dimensions for clean html2canvas capture
-              wrapper.style.width = A4_WIDTH_PX + 'px';
-              wrapper.style.height = clone.offsetHeight + 'px';
+              clone.style.minHeight = '0';
+              clone.style.height = 'auto';
+
+              var cloneHeight = clone.offsetHeight;
 
               var opt = {
                 margin: 0,
@@ -828,12 +820,17 @@
                   scale: 2,
                   useCORS: true,
                   backgroundColor: '#ffffff',
+                  // Explicit canvas size matching the clone dimensions so
+                  // html2canvas captures exactly the right area.  We use
+                  // `width`/`height` (html2canvas-native) rather than
+                  // `windowWidth`/`windowHeight` (html2pdf wrapper) to set
+                  // the canvas dimensions without simulating a virtual viewport.
+                  width: A4_WIDTH_PX,
+                  height: cloneHeight,
                   x: 0,
                   y: 0,
                   scrollX: 0,
-                  scrollY: 0,
-                  windowWidth: A4_WIDTH_PX,
-                  windowHeight: Math.max(A4_HEIGHT_PX, clone.offsetHeight)
+                  scrollY: 0
                 },
                 jsPDF: {
                   unit: 'px',
@@ -843,15 +840,15 @@
                 pagebreak: { mode: ['avoid-all'] }
               };
 
-              // Render from the wrapper so html2canvas has a clean, on-screen container
-              html2pdf().set(opt).from(wrapper).save().then(function() {
+              // Render the clone directly — no wrapper needed
+              html2pdf().set(opt).from(clone).save().then(function() {
                 // Cleanup
-                if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+                if (clone.parentNode) clone.parentNode.removeChild(clone);
                 btnDownload.disabled = false;
                 btnDownload.innerHTML = '<svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
                 console.log('GOFLOW: PDF generated successfully. Font size used: ' + currentFontSize.toFixed(1) + 'px, Padding: ' + currentPadding + 'px, Iterations: ' + iterations);
               }).catch(function(err) {
-                if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+                if (clone.parentNode) clone.parentNode.removeChild(clone);
                 btnDownload.disabled = false;
                 btnDownload.innerHTML = '<svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
                 console.error('GOFLOW: PDF generation failed:', err);
@@ -863,6 +860,10 @@
           // Kick off the measurement loop
           requestAnimationFrame(measureAndScale);
         } catch(e) {
+          // Clean up the clone if it was appended to the DOM
+          if (typeof clone !== 'undefined' && clone.parentNode) {
+            clone.parentNode.removeChild(clone);
+          }
           btnDownload.disabled = false;
           btnDownload.innerHTML = '<svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
           console.error('GOFLOW: PDF generation error:', e);
