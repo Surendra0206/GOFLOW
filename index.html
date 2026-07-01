@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Build a professional, ATS-friendly CV with real-time preview and single-page PDF export. Free, no sign-up required.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="GOFLOW — Professional CV Builder">
+  <meta property="og:description" content="Build a polished CV with live preview and instant PDF download. ATS-optimized layouts, free to use.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://goflow.dev">
+  <meta property="og:image" content="https://goflow.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GOFLOW — Professional CV Builder">
+  <meta name="twitter:description" content="Build a polished CV with live preview and instant PDF download. ATS-optimized layouts, free to use.">
+  <meta name="twitter:image" content="https://goflow.dev/og-image.png">
+  <link rel="canonical" href="https://goflow.dev">
+  <title>GOFLOW — Professional CV Builder | Free ATS-Friendly Resume Generator</title>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "GOFLOW CV Builder",
+    "url": "https://goflow.dev",
+    "description": "Build a professional, ATS-friendly CV with real-time preview and single-page PDF export.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+  <!-- html2pdf.js CDN for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    /* ===== Reset & Global ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --text: #1a1a2e;
+      --text-secondary: #4a4a6a;
+      --border: #e2e6ef;
+      --accent: #3b5998;
+      --accent-light: #eef2fa;
+      --danger: #c0392b;
+      --warning-bg: #fef9e7;
+      --warning-text: #7d6608;
+      --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Georgia', 'Times New Roman', serif;
+      --radius: 8px;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-preview: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ===== Header ===== */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: var(--shadow-card);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .app-logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .app-logo span { color: var(--text); font-weight: 400; }
+    .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    /* ===== Buttons ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #2e497a; box-shadow: 0 2px 8px rgba(59,89,152,0.3); }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { background: var(--bg); }
+    .btn:disabled { opacity: 0.5; pointer-events: none; }
+    .download-icon { width: 18px; height: 18px; }
+
+    /* ===== Warning Toast ===== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--warning-bg);
+      color: var(--warning-text);
+      border: 1px solid #f0d77b;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+    }
+    .toast.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+    /* ===== Main Layout ===== */
+    .app-container {
+      display: flex;
+      gap: 0;
+      max-width: 1440px;
+      margin: 0 auto;
+      min-height: calc(100vh - 69px);
+    }
+    .form-pane {
+      flex: 0 0 480px;
+      max-width: 480px;
+      padding: 24px 20px 40px;
+      overflow-y: auto;
+      max-height: calc(100vh - 69px);
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .preview-pane {
+      flex: 1;
+      padding: 24px 32px 40px;
+      overflow-y: auto;
+      max-height: calc(100vh - 69px);
+      display: flex;
+      justify-content: center;
+    }
+
+    /* ===== Form Styles ===== */
+    .form-section {
+      margin-bottom: 24px;
+    }
+    .form-section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-family: var(--font-sans);
+      transition: border-color 0.15s;
+      background: #fafbfc;
+      resize: vertical;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: #fff;
+    }
+    .form-group textarea { min-height: 70px; }
+    .form-row { display: flex; gap: 10px; }
+    .form-row .form-group { flex: 1; }
+
+    /* ===== Dynamic List Sections ===== */
+    .dynamic-list { list-style: none; }
+    .dynamic-entry {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fafbfc;
+      position: relative;
+    }
+    .dynamic-entry .remove-entry {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #999;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .dynamic-entry .remove-entry:hover { color: var(--danger); background: #fdecea; }
+    .add-entry-btn {
+      background: none;
+      border: 1.5px dashed var(--border);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s;
+    }
+    .add-entry-btn:hover { background: var(--accent-light); }
+
+    /* ===== CV Preview ===== */
+    .cv-preview-wrapper {
+      width: 794px; /* A4 width in px */
+      flex-shrink: 0;
+    }
+    .cv-preview {
+      width: 794px;
+      min-height: 1122px; /* A4 height in px */
+      background: #fff;
+      box-shadow: var(--shadow-preview);
+      padding: 60px 64px;
+      font-family: var(--font-serif);
+      color: #222;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+    .cv-preview h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+      color: #1a1a2e;
+      font-family: var(--font-sans);
+    }
+    .cv-preview .cv-contact {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 22px;
+      font-family: var(--font-sans);
+    }
+    .cv-preview .cv-contact span { margin: 0 6px; }
+    .cv-preview .cv-section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 4px;
+      margin-top: 22px;
+      margin-bottom: 10px;
+      font-family: var(--font-sans);
+    }
+    .cv-preview .cv-summary {
+      font-size: 0.92rem;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .cv-preview .cv-entry { margin-bottom: 12px; }
+    .cv-preview .cv-entry-header {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+    .cv-preview .cv-entry-sub {
+      font-style: italic;
+      color: #555;
+      font-size: 0.85rem;
+    }
+    .cv-preview .cv-entry-desc {
+      font-size: 0.85rem;
+      color: #444;
+      margin-top: 2px;
+    }
+    .cv-preview .cv-skills-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      list-style: none;
+    }
+    .cv-preview .cv-skills-list li {
+      background: var(--accent-light);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-family: var(--font-sans);
+    }
+    .cv-preview .cv-languages-list,
+    .cv-preview .cv-certifications-list,
+    .cv-preview .cv-achievements-list {
+      list-style: disc inside;
+      font-size: 0.9rem;
+    }
+    .cv-preview .cv-languages-list li,
+    .cv-preview .cv-certifications-list li,
+    .cv-preview .cv-achievements-list li {
+      margin-bottom: 3px;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 1100px) {
+      .app-container { flex-direction: column; }
+      .form-pane { flex: none; max-width: 100%; max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
+      .preview-pane { justify-content: flex-start; overflow-x: auto; }
+      .cv-preview-wrapper { transform-origin: top left; }
+    }
+    @media (max-width: 860px) {
+      .cv-preview-wrapper { transform: scale(0.55); transform-origin: top left; margin-bottom: -500px; }
+      .form-pane { padding: 16px; }
+    }
+
+    /* ===== Print (for PDF mirroring) ===== */
+    @media print {
+      body { background: #fff; }
+      .app-header, .form-pane, .toast { display: none !important; }
+      .preview-pane { overflow: visible; max-height: none; padding: 0; }
+      .cv-preview { box-shadow: none; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-logo">GO<span>FLOW</span></div>
+    <div class="header-actions">
+      <button class="btn btn-outline" id="btnReset" title="Clear all fields and start fresh">Clear Form</button>
+      <button class="btn btn-primary" id="btnDownload" title="Download single-page A4 PDF">
+        <svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PDF
+      </button>
+    </div>
+  </header>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="app-container">
+    <!-- ===== FORM PANE ===== -->
+    <aside class="form-pane" id="formPane">
+      <!-- Personal Details -->
+      <div class="form-section">
+        <div class="form-section-title">Personal Details</div>
+        <div class="form-group"><label for="fullName">Full Name</label><input type="text" id="fullName" placeholder="John Doe" data-cv-field="name"></div>
+        <div class="form-row">
+          <div class="form-group"><label for="email">Email</label><input type="email" id="email" placeholder="john@example.com" data-cv-field="email"></div>
+          <div class="form-group"><label for="phone">Phone</label><input type="text" id="phone" placeholder="+1 (555) 123-4567" data-cv-field="phone"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label for="location">City, Country</label><input type="text" id="location" placeholder="New York, NY" data-cv-field="location"></div>
+          <div class="form-group"><label for="linkedin">LinkedIn URL</label><input type="text" id="linkedin" placeholder="linkedin.com/in/johndoe" data-cv-field="linkedin"></div>
+        </div>
+      </div>
+
+      <!-- Professional Summary -->
+      <div class="form-section">
+        <div class="form-section-title">Professional Summary</div>
+        <div class="form-group"><textarea id="summary" placeholder="Brief professional summary highlighting your key strengths and career goals..." data-cv-field="summary"></textarea></div>
+      </div>
+
+      <!-- Work Experience -->
+      <div class="form-section">
+        <div class="form-section-title">Work Experience</div>
+        <ul class="dynamic-list" id="experienceList"></ul>
+        <button class="add-entry-btn" id="btnAddExperience">+ Add Work Experience</button>
+      </div>
+
+      <!-- Education -->
+      <div class="form-section">
+        <div class="form-section-title">Education</div>
+        <ul class="dynamic-list" id="educationList"></ul>
+        <button class="add-entry-btn" id="btnAddEducation">+ Add Education</button>
+      </div>
+
+      <!-- Skills -->
+      <div class="form-section">
+        <div class="form-section-title">Skills</div>
+        <div class="form-group">
+          <label for="skillsInput">Enter skills separated by commas</label>
+          <input type="text" id="skillsInput" placeholder="Project Management, Data Analysis, Communication..." data-cv-field="skills">
+        </div>
+      </div>
+
+      <!-- Certifications -->
+      <div class="form-section">
+        <div class="form-section-title">Certifications</div>
+        <ul class="dynamic-list" id="certificationsList"></ul>
+        <button class="add-entry-btn" id="btnAddCertification">+ Add Certification</button>
+      </div>
+
+      <!-- Languages -->
+      <div class="form-section">
+        <div class="form-section-title">Languages</div>
+        <ul class="dynamic-list" id="languagesList"></ul>
+        <button class="add-entry-btn" id="btnAddLanguage">+ Add Language</button>
+      </div>
+
+      <!-- Achievements -->
+      <div class="form-section">
+        <div class="form-section-title">Achievements</div>
+        <ul class="dynamic-list" id="achievementsList"></ul>
+        <button class="add-entry-btn" id="btnAddAchievement">+ Add Achievement</button>
+      </div>
+    </aside>
+
+    <!-- ===== PREVIEW PANE ===== -->
+    <main class="preview-pane">
+      <div class="cv-preview-wrapper">
+        <div class="cv-preview" id="cvPreview">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+  (function() {
+    // ==================== CONSTANTS ====================
+    const A4_WIDTH_PX = 794;
+    const A4_HEIGHT_PX = 1122;
+    const DEFAULT_FONT_SIZE = 14;     // px base for preview
+    const DEFAULT_PADDING = 60;       // px
+    const FONT_SIZE_STEP = 0.5;       // px per scaling iteration
+    const PADDING_STEP = 5;           // px per scaling iteration
+    const MIN_FONT_SIZE = 8;          // px floor
+    const STORAGE_KEY = 'goflow_cv_data';
+
+    // ==================== DOM REFS ====================
+    const cvPreview = document.getElementById('cvPreview');
+    const toast = document.getElementById('toast');
+    const btnDownload = document.getElementById('btnDownload');
+    const btnReset = document.getElementById('btnReset');
+
+    // ==================== STATE ====================
+    let cvData = loadFromStorage();
+
+    function defaultData() {
+      return {
+        name: '', email: '', phone: '', location: '', linkedin: '',
+        summary: '',
+        experience: [],   // { title, company, dates, description }
+        education: [],    // { degree, institution, year, description }
+        skills: '',
+        certifications: [], // { name, issuer, year }
+        languages: [],      // { language, proficiency }
+        achievements: []    // { title, description }
+      };
+    }
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          // Merge with defaults to handle schema changes
+          const def = defaultData();
+          return { ...def, ...parsed };
+        }
+      } catch(e) { console.warn('GOFLOW: Could not parse localStorage data, resetting.'); }
+      return defaultData();
+    }
+
+    function saveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cvData));
+      } catch(e) { console.warn('GOFLOW: Could not save to localStorage.'); }
+    }
+
+    // ==================== TOAST ====================
+    let toastTimer;
+    function showToast(message, durationMs) {
+      durationMs = durationMs || 4000;
+      toast.textContent = message;
+      toast.classList.add('visible');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function() {
+        toast.classList.remove('visible');
+      }, durationMs);
+    }
+
+    // ==================== RENDER PREVIEW ====================
+    function renderPreview() {
+      var d = cvData;
+
+      var contactParts = [];
+      if (d.email) contactParts.push(d.email);
+      if (d.phone) contactParts.push(d.phone);
+      if (d.location) contactParts.push(d.location);
+      if (d.linkedin) contactParts.push(d.linkedin);
+      var contactLine = contactParts.join(' <span>&bull;</span> ');
+
+      var html = '';
+
+      // Name
+      if (d.name) {
+        html += '<h1>' + escapeHTML(d.name) + '</h1>';
+      }
+
+      // Contact
+      if (contactLine) {
+        html += '<div class="cv-contact">' + contactLine + '</div>';
+      }
+
+      // Summary
+      if (d.summary.trim()) {
+        html += '<div class="cv-section-title">Professional Summary</div>';
+        html += '<div class="cv-summary">' + escapeHTML(d.summary) + '</div>';
+      }
+
+      // Experience
+      if (d.experience.length > 0) {
+        html += '<div class="cv-section-title">Work Experience</div>';
+        for (var i = 0; i < d.experience.length; i++) {
+          var exp = d.experience[i];
+          html += '<div class="cv-entry">';
+          html += '<div class="cv-entry-header"><span>' + escapeHTML(exp.title || 'Position') + '</span><span>' + escapeHTML(exp.dates || '') + '</span></div>';
+          html += '<div class="cv-entry-sub">' + escapeHTML(exp.company || 'Company') + '</div>';
+          if (exp.description) html += '<div class="cv-entry-desc">' + escapeHTML(exp.description) + '</div>';
+          html += '</div>';
+        }
+      }
+
+      // Education
+      if (d.education.length > 0) {
+        html += '<div class="cv-section-title">Education</div>';
+        for (var i = 0; i < d.education.length; i++) {
+          var edu = d.education[i];
+          html += '<div class="cv-entry">';
+          html += '<div class="cv-entry-header"><span>' + escapeHTML(edu.degree || 'Degree') + '</span><span>' + escapeHTML(edu.year || '') + '</span></div>';
+          html += '<div class="cv-entry-sub">' + escapeHTML(edu.institution || 'Institution') + '</div>';
+          if (edu.description) html += '<div class="cv-entry-desc">' + escapeHTML(edu.description) + '</div>';
+          html += '</div>';
+        }
+      }
+
+      // Skills
+      var skillsArr = d.skills ? d.skills.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+      if (skillsArr.length > 0) {
+        html += '<div class="cv-section-title">Skills</div>';
+        html += '<ul class="cv-skills-list">';
+        for (var i = 0; i < skillsArr.length; i++) {
+          html += '<li>' + escapeHTML(skillsArr[i]) + '</li>';
+        }
+        html += '</ul>';
+      }
+
+      // Certifications
+      if (d.certifications.length > 0) {
+        html += '<div class="cv-section-title">Certifications</div>';
+        html += '<ul class="cv-certifications-list">';
+        for (var i = 0; i < d.certifications.length; i++) {
+          var cert = d.certifications[i];
+          html += '<li><strong>' + escapeHTML(cert.name || 'Certification') + '</strong>';
+          if (cert.issuer) html += ' &mdash; ' + escapeHTML(cert.issuer);
+          if (cert.year) html += ' (' + escapeHTML(cert.year) + ')';
+          html += '</li>';
+        }
+        html += '</ul>';
+      }
+
+      // Languages
+      if (d.languages.length > 0) {
+        html += '<div class="cv-section-title">Languages</div>';
+        html += '<ul class="cv-languages-list">';
+        for (var i = 0; i < d.languages.length; i++) {
+          var lang = d.languages[i];
+          html += '<li>' + escapeHTML(lang.language || 'Language');
+          if (lang.proficiency) html += ' &mdash; ' + escapeHTML(lang.proficiency);
+          html += '</li>';
+        }
+        html += '</ul>';
+      }
+
+      // Achievements
+      if (d.achievements.length > 0) {
+        html += '<div class="cv-section-title">Achievements</div>';
+        html += '<ul class="cv-achievements-list">';
+        for (var i = 0; i < d.achievements.length; i++) {
+          var ach = d.achievements[i];
+          html += '<li><strong>' + escapeHTML(ach.title || 'Achievement') + '</strong>';
+          if (ach.description) html += ' &mdash; ' + escapeHTML(ach.description);
+          html += '</li>';
+        }
+        html += '</ul>';
+      }
+
+      cvPreview.innerHTML = html;
+    }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    // ==================== BIND FORM TO STATE ====================
+    function bindSimpleFields() {
+      var fields = document.querySelectorAll('[data-cv-field]');
+      for (var i = 0; i < fields.length; i++) {
+        (function(el) {
+          var key = el.getAttribute('data-cv-field');
+          // Set initial value
+          el.value = cvData[key] || '';
+          el.addEventListener('input', function() {
+            cvData[key] = el.value;
+            saveToStorage();
+            renderPreview();
+          });
+        })(fields[i]);
+      }
+    }
+
+    // ==================== DYNAMIC LIST HELPERS ====================
+    function createDynamicList(listId, dataArray, templateFn, addBtnId) {
+      var listEl = document.getElementById(listId);
+      var addBtn = document.getElementById(addBtnId);
+
+      function rebuild() {
+        listEl.innerHTML = '';
+        for (var i = 0; i < dataArray.length; i++) {
+          (function(idx) {
+            var entry = document.createElement('li');
+            entry.className = 'dynamic-entry';
+            entry.innerHTML = templateFn(dataArray[idx], idx);
+            listEl.appendChild(entry);
+
+            // Bind inputs inside entry
+            var inputs = entry.querySelectorAll('input, textarea');
+            for (var j = 0; j < inputs.length; j++) {
+              (function(inp) {
+                var prop = inp.getAttribute('data-prop');
+                inp.addEventListener('input', function() {
+                  dataArray[idx][prop] = inp.value;
+                  saveToStorage();
+                  renderPreview();
+                });
+              })(inputs[j]);
+            }
+
+            // Remove button
+            var removeBtn = entry.querySelector('.remove-entry');
+            if (removeBtn) {
+              removeBtn.addEventListener('click', function() {
+                dataArray.splice(idx, 1);
+                saveToStorage();
+                renderPreview();
+                rebuild();
+              });
+            }
+          })(i);
+        }
+      }
+
+      addBtn.addEventListener('click', function() {
+        dataArray.push({});
+        saveToStorage();
+        renderPreview();
+        rebuild();
+      });
+
+      rebuild();
+      return rebuild;
+    }
+
+    // ==================== INITIALIZE FORM LISTS ====================
+    function experienceTemplate(entry, idx) {
+      return '<button class="remove-entry" title="Remove">&times;</button>' +
+        '<div class="form-row"><div class="form-group"><label>Job Title</label><input type="text" data-prop="title" value="' + escapeHTML(entry.title || '') + '" placeholder="Software Engineer"></div>' +
+        '<div class="form-group"><label>Company</label><input type="text" data-prop="company" value="' + escapeHTML(entry.company || '') + '" placeholder="Acme Corp"></div></div>' +
+        '<div class="form-group"><label>Dates</label><input type="text" data-prop="dates" value="' + escapeHTML(entry.dates || '') + '" placeholder="Jan 2020 – Present"></div>' +
+        '<div class="form-group"><label>Description</label><textarea data-prop="description" placeholder="Key responsibilities and achievements...">' + escapeHTML(entry.description || '') + '</textarea></div>';
+    }
+
+    function educationTemplate(entry, idx) {
+      return '<button class="remove-entry" title="Remove">&times;</button>' +
+        '<div class="form-row"><div class="form-group"><label>Degree</label><input type="text" data-prop="degree" value="' + escapeHTML(entry.degree || '') + '" placeholder="B.Sc. Computer Science"></div>' +
+        '<div class="form-group"><label>Institution</label><input type="text" data-prop="institution" value="' + escapeHTML(entry.institution || '') + '" placeholder="University of XYZ"></div></div>' +
+        '<div class="form-group"><label>Year</label><input type="text" data-prop="year" value="' + escapeHTML(entry.year || '') + '" placeholder="2018"></div>' +
+        '<div class="form-group"><label>Description (optional)</label><textarea data-prop="description" placeholder="Honors, GPA, relevant coursework...">' + escapeHTML(entry.description || '') + '</textarea></div>';
+    }
+
+    function certificationTemplate(entry, idx) {
+      return '<button class="remove-entry" title="Remove">&times;</button>' +
+        '<div class="form-row"><div class="form-group"><label>Certification Name</label><input type="text" data-prop="name" value="' + escapeHTML(entry.name || '') + '" placeholder="PMP"></div>' +
+        '<div class="form-group"><label>Issuing Organization</label><input type="text" data-prop="issuer" value="' + escapeHTML(entry.issuer || '') + '" placeholder="PMI"></div></div>' +
+        '<div class="form-group"><label>Year</label><input type="text" data-prop="year" value="' + escapeHTML(entry.year || '') + '" placeholder="2022"></div>';
+    }
+
+    function languageTemplate(entry, idx) {
+      return '<button class="remove-entry" title="Remove">&times;</button>' +
+        '<div class="form-row"><div class="form-group"><label>Language</label><input type="text" data-prop="language" value="' + escapeHTML(entry.language || '') + '" placeholder="English"></div>' +
+        '<div class="form-group"><label>Proficiency</label><input type="text" data-prop="proficiency" value="' + escapeHTML(entry.proficiency || '') + '" placeholder="Native / B2 / Intermediate"></div></div>';
+    }
+
+    function achievementTemplate(entry, idx) {
+      return '<button class="remove-entry" title="Remove">&times;</button>' +
+        '<div class="form-group"><label>Achievement Title</label><input type="text" data-prop="title" value="' + escapeHTML(entry.title || '') + '" placeholder="Employee of the Year"></div>' +
+        '<div class="form-group"><label>Description (optional)</label><textarea data-prop="description" placeholder="Brief context...">' + escapeHTML(entry.description || '') + '</textarea></div>';
+    }
+
+    // ==================== PDF GENERATION WITH AUTO-SCALING ====================
+    function generatePDF() {
+      if (typeof html2pdf === 'undefined') {
+        showToast('PDF library (html2pdf.js) is still loading. Please try again in a moment.', 5000);
+        return;
+      }
+
+      btnDownload.disabled = true;
+      btnDownload.textContent = 'Generating...';
+
+      // Use setTimeout to allow UI to update before heavy work
+      setTimeout(function() {
+        try {
+          // 1. Clone the preview element
+          var clone = cvPreview.cloneNode(true);
+
+          // 2. Style the clone for measurement: off-screen, explicit dimensions
+          clone.style.position = 'absolute';
+          clone.style.left = '-9999px';
+          clone.style.top = '0';
+          clone.style.width = A4_WIDTH_PX + 'px';
+          clone.style.visibility = 'visible';
+          clone.style.display = 'block';
+          clone.style.boxShadow = 'none';
+          clone.style.margin = '0';
+          document.body.appendChild(clone);
+
+          // 3. Reset scaling variables
+          var currentFontSize = DEFAULT_FONT_SIZE;
+          var currentPadding = DEFAULT_PADDING;
+          clone.style.fontSize = currentFontSize + 'px';
+          clone.style.padding = currentPadding + 'px';
+
+          // 4. Auto-scale loop
+          var iterations = 0;
+          var maxIterations = 200; // safety cap
+
+          function measureAndScale() {
+            var height = clone.offsetHeight;
+
+            if (height > A4_HEIGHT_PX && currentFontSize > MIN_FONT_SIZE && iterations < maxIterations) {
+              currentFontSize = Math.max(MIN_FONT_SIZE, currentFontSize - FONT_SIZE_STEP);
+              currentPadding = Math.max(10, currentPadding - PADDING_STEP);
+              clone.style.fontSize = currentFontSize + 'px';
+              clone.style.padding = currentPadding + 'px';
+              iterations++;
+
+              // Log warning when floor is reached
+              if (currentFontSize <= MIN_FONT_SIZE) {
+                console.warn('GOFLOW: Auto-scaling reached minimum font size floor (8pt). Content may be too long for a single page.');
+              }
+
+              // Use requestAnimationFrame to allow reflow
+              requestAnimationFrame(measureAndScale);
+            } else {
+              // Scaling complete — generate PDF
+              if (currentFontSize <= MIN_FONT_SIZE && clone.offsetHeight > A4_HEIGHT_PX) {
+                showToast('⚠️ Content exceeds one page even at minimum font size (8pt). Consider shortening your content.', 6000);
+                console.warn('GOFLOW: Content still exceeds one page at minimum font size. PDF may clip or overflow.');
+              }
+
+              // Set final explicit dimensions on clone for html2pdf
+              clone.style.width = A4_WIDTH_PX + 'px';
+              clone.style.minHeight = 'auto';
+
+              var opt = {
+                margin: 0,
+                filename: (cvData.name ? cvData.name.replace(/\s+/g, '_') : 'CV') + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                  scale: 2,
+                  useCORS: true,
+                  letterRendering: true
+                },
+                jsPDF: {
+                  unit: 'px',
+                  format: [A4_WIDTH_PX, A4_HEIGHT_PX],
+                  orientation: 'portrait'
+                },
+                pagebreak: { mode: ['avoid-all'] }
+              };
+
+              html2pdf().set(opt).from(clone).save().then(function() {
+                // Cleanup
+                if (clone.parentNode) clone.parentNode.removeChild(clone);
+                btnDownload.disabled = false;
+                btnDownload.innerHTML = '<svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
+                console.log('GOFLOW: PDF generated successfully. Font size used: ' + currentFontSize.toFixed(1) + 'px, Padding: ' + currentPadding + 'px, Iterations: ' + iterations);
+              }).catch(function(err) {
+                if (clone.parentNode) clone.parentNode.removeChild(clone);
+                btnDownload.disabled = false;
+                btnDownload.innerHTML = '<svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
+                console.error('GOFLOW: PDF generation failed:', err);
+                showToast('PDF generation failed. Please try again.', 4000);
+              });
+            }
+          }
+
+          // Kick off the measurement loop
+          requestAnimationFrame(measureAndScale);
+        } catch(e) {
+          btnDownload.disabled = false;
+          btnDownload.innerHTML = '<svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
+          console.error('GOFLOW: PDF generation error:', e);
+          showToast('An unexpected error occurred. Please try again.', 4000);
+        }
+      }, 100);
+    }
+
+    // ==================== RESET ====================
+    function resetAll() {
+      if (!confirm('Are you sure you want to clear all CV data? This cannot be undone.')) return;
+      cvData = defaultData();
+      saveToStorage();
+      renderPreview();
+      // Re-initialize form bindings
+      bindSimpleFields();
+      initDynamicLists();
+      showToast('Form cleared. All data has been reset.', 2500);
+    }
+
+    // ==================== INITIALIZATION ====================
+    var rebuildFns = [];
+
+    function initDynamicLists() {
+      // Clear previous
+      rebuildFns = [];
+      document.getElementById('experienceList').innerHTML = '';
+      document.getElementById('educationList').innerHTML = '';
+      document.getElementById('certificationsList').innerHTML = '';
+      document.getElementById('languagesList').innerHTML = '';
+      document.getElementById('achievementsList').innerHTML = '';
+
+      rebuildFns.push(createDynamicList('experienceList', cvData.experience, experienceTemplate, 'btnAddExperience'));
+      rebuildFns.push(createDynamicList('educationList', cvData.education, educationTemplate, 'btnAddEducation'));
+      rebuildFns.push(createDynamicList('certificationsList', cvData.certifications, certificationTemplate, 'btnAddCertification'));
+      rebuildFns.push(createDynamicList('languagesList', cvData.languages, languageTemplate, 'btnAddLanguage'));
+      rebuildFns.push(createDynamicList('achievementsList', cvData.achievements, achievementTemplate, 'btnAddAchievement'));
+    }
+
+    function init() {
+      bindSimpleFields();
+      initDynamicLists();
+      renderPreview();
+
+      btnDownload.addEventListener('click', generatePDF);
+      btnReset.addEventListener('click', resetAll);
+    }
+
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>
