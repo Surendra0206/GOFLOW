@@ -1,0 +1,25 @@
+{
+  "name": "goflow-cv-builder",
+  "version": "1.0.0",
+  "description": "Single-page CV generator with real-time preview and A4 PDF export",
+  "private": true,
+  "scripts": {
+    "lint": "npm run lint:html && npm run lint:css && npm run lint:js",
+    "lint:html": "htmlhint index.html",
+    "lint:css": "stylelint \"index.html\" --custom-syntax postcss-html || stylelint \"**/*.css\"",
+    "lint:js": "eslint test.js --no-error-on-unmatched-pattern",
+    "test": "node test.js",
+    "start": "npx http-server . -p 8080 -c-1 --cors"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "htmlhint": "^1.1.4",
+    "http-server": "^14.1.1",
+    "postcss-html": "^1.6.0",
+    "puppeteer": "^22.0.0",
+    "stylelint": "^16.2.0",
+    "stylelint-config-standard": "^36.0.0"
+  },
+  "keywords": ["cv", "resume", "pdf", "generator"],
+  "license": "UNLICENSED"
+}
