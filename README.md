@@ -10,24 +10,40 @@ A single-page CV generator with real-time preview, localStorage persistence, and
 - **Single-page PDF export** — downloads an A4 PDF that matches the on-screen preview
 - **Auto-scaling** — font size and margins reduce iteratively to fit content on one page (8pt floor with user warning)
 - **Offline-capable** — once html2pdf.js is cached by the browser, PDF generation works without internet
-- **Zero dependencies** (beyond the html2pdf.js CDN script) — pure HTML/CSS/JS, no build step required
+- **Linting** — HTMLHint, Stylelint, and ESLint configured for code quality
+- **Automated tests** — Puppeteer-based browser tests with static analysis fallback
 
 ## Prerequisites
 
-- A modern web browser (Chrome 90+, Firefox 90+, Edge 90+, Safari 15+)
+- **Node.js 18+** and **npm 9+** (for development tooling: linting and tests)
+- A modern web browser (Chrome 90+, Firefox 90+, Edge 90+, Safari 15+) for running the app
 - Internet connection for first load (to fetch the html2pdf.js CDN script; subsequent loads work offline via browser cache)
+- For browser tests: Chrome or Chromium installed (tests gracefully skip if unavailable)
+
+## Install
+
+```bash
+npm install
+```
 
 ## Quick Start
 
 ### Option 1: Open directly
 
 ```bash
-# Clone or download this repository, then:
 open index.html
 # or double-click index.html in your file explorer
 ```
 
-### Option 2: Serve with any static server
+### Option 2: Serve with npm
+
+```bash
+npm start
+```
+
+The app will be available at `http://localhost:8080`.
+
+### Option 3: Serve with any static server
 
 ```bash
 # Using Python 3
@@ -40,7 +56,25 @@ npx serve .
 # Right-click index.html → "Open with Live Server"
 ```
 
-The app will be available at `http://localhost:8080` (or the port your server uses).
+## Linting
+
+```bash
+# Run all linters
+npm run lint
+
+# Run individually
+npm run lint:html    # HTMLHint
+npm run lint:css     # Stylelint
+npm run lint:js      # ESLint (checks test.js)
+```
+
+## Testing
+
+```bash
+npm test
+```
+
+Runs the automated Puppeteer test suite. If Chrome/Chromium cannot launch (e.g., missing system libraries in CI/container environments), the test falls back to static HTML analysis covering 20+ structural checks (DOCTYPE, meta tags, Open Graph, JSON-LD, form sections, PDF generation, A4 dimensions, print media query, and more). Both modes produce a clear pass/fail report.
 
 ## How to Use
 
@@ -69,14 +103,17 @@ When **Download PDF** is clicked:
 
 None required. This is a fully client-side application.
 
-`.env.example` is not needed — no server-side secrets or API keys are used.
-
 ## Project Structure
 
 ```
 .
-├── index.html    # The entire application (HTML + CSS + JS)
-└── README.md     # This file
+├── index.html         # The entire application (HTML + CSS + JS)
+├── package.json       # npm scripts and dev dependencies
+├── test.js            # Puppeteer test suite with static analysis fallback
+├── .eslintrc.json     # ESLint configuration
+├── .htmlhintrc        # HTMLHint configuration
+├── .stylelintrc.json  # Stylelint configuration
+└── README.md          # This file
 ```
 
 ## Tech Stack
