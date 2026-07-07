@@ -274,6 +274,30 @@
       font-family: var(--font-sans);
     }
     .cv-preview .cv-contact span { margin: 0 6px; }
+    .cv-preview .cv-photo-area {
+      float: right;
+      width: 100px;
+      height: 120px;
+      border: 1.5px dashed var(--border);
+      border-radius: 6px;
+      margin-left: 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: #999;
+      font-family: var(--font-sans);
+      text-align: center;
+      line-height: 1.3;
+      background: #fafbfc;
+      overflow: hidden;
+    }
+    .cv-preview .cv-photo-area img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
     .cv-preview .cv-section-title {
       font-size: 0.8rem;
       text-transform: uppercase;
@@ -350,6 +374,7 @@
 
     /* ===== Print (for PDF mirroring) ===== */
     @media print {
+      @page { size: a4; margin: 10mm; }
       body { background: #fff; }
       .app-header, .form-pane, .toast { display: none !important; }
       .preview-pane { overflow: visible; max-height: none; padding: 0; }
@@ -386,6 +411,16 @@
           <div class="form-group"><label for="location">City, Country</label><input type="text" id="location" placeholder="New York, NY" data-cv-field="location"></div>
           <div class="form-group"><label for="linkedin">LinkedIn URL</label><input type="text" id="linkedin" placeholder="linkedin.com/in/johndoe" data-cv-field="linkedin"></div>
         </div>
+        <div class="form-group">
+          <label for="photoInput">Profile Photo</label>
+          <input type="file" id="photoInput" accept="image/*" data-cv-field="photo">
+        </div>
+      </div>
+
+      <!-- Career Objective -->
+      <div class="form-section">
+        <div class="form-section-title">Career Objective</div>
+        <div class="form-group"><textarea id="careerObjective" placeholder="A brief career objective statement outlining your professional goals and what you aim to achieve..." data-cv-field="careerObjective"></textarea></div>
       </div>
 
       <!-- Professional Summary -->
@@ -472,7 +507,8 @@
 
     function defaultData() {
       return {
-        name: '', email: '', phone: '', location: '', linkedin: '',
+        name: '', email: '', phone: '', location: '', linkedin: '', photo: '',
+        careerObjective: '',
         summary: '',
         experience: [],   // { title, company, dates, description }
         education: [],    // { degree, institution, year, description }
@@ -535,6 +571,19 @@
       // Contact
       if (contactLine) {
         html += '<div class="cv-contact">' + contactLine + '</div>';
+      }
+
+      // Photo (top-right)
+      if (d.photo) {
+        html += '<div class="cv-photo-area"><img src="' + escapeHTML(d.photo) + '" alt="Profile photo"></div>';
+      } else {
+        html += '<div class="cv-photo-area">Profile<br>Photo</div>';
+      }
+
+      // Career Objective
+      if (d.careerObjective.trim()) {
+        html += '<div class="cv-section-title">Career Objective</div>';
+        html += '<div class="cv-summary">' + escapeHTML(d.careerObjective) + '</div>';
       }
 
       // Summary
@@ -636,13 +685,28 @@
       for (var i = 0; i < fields.length; i++) {
         (function(el) {
           var key = el.getAttribute('data-cv-field');
-          // Set initial value
-          el.value = cvData[key] || '';
-          el.addEventListener('input', function() {
-            cvData[key] = el.value;
-            saveToStorage();
-            renderPreview();
-          });
+          if (el.type === 'file') {
+            // Set initial: no value to prefill for file inputs
+            el.addEventListener('change', function() {
+              if (el.files && el.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                  cvData[key] = e.target.result;
+                  saveToStorage();
+                  renderPreview();
+                };
+                reader.readAsDataURL(el.files[0]);
+              }
+            });
+          } else {
+            // Set initial value
+            el.value = cvData[key] || '';
+            el.addEventListener('input', function() {
+              cvData[key] = el.value;
+              saveToStorage();
+              renderPreview();
+            });
+          }
         })(fields[i]);
       }
     }
