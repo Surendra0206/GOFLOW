@@ -2,7 +2,8 @@
   "env": {
     "browser": true,
     "es6": true,
-    "node": true
+    "node": true,
+    "jest": true
   },
   "parserOptions": {
     "ecmaVersion": 2020
@@ -21,14 +22,15 @@
     "camelcase": "off"
   },
   "globals": {
-    "html2pdf": "readonly",
     "localStorage": "readonly",
     "confirm": "readonly",
     "console": "readonly",
     "document": "readonly",
     "setTimeout": "readonly",
     "clearTimeout": "readonly",
-    "requestAnimationFrame": "readonly"
+    "fetch": "readonly",
+    "ApiService": "readonly",
+    "GOFLOW_CONFIG": "readonly"
   },
-  "ignorePatterns": ["node_modules/"]
+  "ignorePatterns": ["node_modules/", "dist/", "config.js"]
 }

@@ -1,25 +1,32 @@
 {
-  "name": "goflow-cv-builder",
+  "name": "goflow-email-generator",
   "version": "1.0.0",
-  "description": "Single-page CV generator with real-time preview and A4 PDF export",
+  "description": "Single-page web application that uses Google Gemini API to generate professional follow-up emails from interview details",
   "private": true,
   "scripts": {
     "lint": "npm run lint:html && npm run lint:css && npm run lint:js",
-    "lint:html": "htmlhint index.html",
-    "lint:css": "stylelint \"index.html\" --custom-syntax postcss-html || stylelint \"**/*.css\"",
-    "lint:js": "eslint test.js --no-error-on-unmatched-pattern",
-    "test": "node test.js",
+    "lint:html": "htmlhint src/index.html",
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "lint:js": "eslint \"src/**/*.js\" \"__tests__/**/*.js\" --no-error-on-unmatched-pattern",
+    "test": "jest --verbose",
     "start": "npx http-server . -p 8080 -c-1 --cors"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "roots": ["__tests__"],
+    "testMatch": ["**/*.test.js"],
+    "transform": {}
   },
   "devDependencies": {
     "eslint": "^8.56.0",
     "htmlhint": "^1.1.4",
     "http-server": "^14.1.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "postcss-html": "^1.6.0",
-    "puppeteer": "^22.0.0",
     "stylelint": "^16.2.0",
     "stylelint-config-standard": "^36.0.0"
   },
-  "keywords": ["cv", "resume", "pdf", "generator"],
+  "keywords": ["ai", "email", "generator", "gemini", "interview"],
   "license": "UNLICENSED"
 }

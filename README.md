@@ -1,24 +1,19 @@
-# GOFLOW — Professional CV Builder
+# GOFLOW — AI Interview Follow-Up Email Generator
 
-A single-page CV generator with real-time preview, localStorage persistence, and single-page PDF export with auto-scaling. Built for Non-IT Wipro associates to create polished, ATS-friendly CVs quickly.
+A single-page web application that uses the **Google Gemini API** to generate professional follow-up emails from interview details. Fill in company name, interviewer, role, and key discussion points, and let AI craft a polished, personalized follow-up email.
 
 ## Features
 
-- **Real-time preview** — changes appear instantly in an A4-preview pane
-- **8 CV sections** — Personal Details, Professional Summary, Work Experience, Education, Skills, Certifications, Languages, Achievements
-- **localStorage auto-save** — data persists across tab closes and browser restarts
-- **Single-page PDF export** — downloads an A4 PDF that matches the on-screen preview
-- **Auto-scaling** — font size and margins reduce iteratively to fit content on one page (8pt floor with user warning)
-- **Offline-capable** — once html2pdf.js is cached by the browser, PDF generation works without internet
-- **Linting** — HTMLHint, Stylelint, and ESLint configured for code quality
-- **Automated tests** — Puppeteer-based browser tests with static analysis fallback
+- **AI-Powered Generation** — Uses Google Gemini (gemini-pro) to draft professional emails
+- **Editable Output** — Review and tweak the generated email in a built-in textarea
+- **Multiple Tones** — Choose from Professional, Casual & Friendly, Enthusiastic, or Grateful
+- **Responsive Design** — Works on desktop, tablet, and mobile
+- **Zero Server Dependencies** — Runs entirely in the browser; only calls the Gemini API
 
 ## Prerequisites
 
-- **Node.js 18+** and **npm 9+** (for development tooling: linting and tests)
-- A modern web browser (Chrome 90+, Firefox 90+, Edge 90+, Safari 15+) for running the app
-- Internet connection for first load (to fetch the html2pdf.js CDN script; subsequent loads work offline via browser cache)
-- For browser tests: Chrome or Chromium installed (tests gracefully skip if unavailable)
+- **Node.js** 18+ (for development tooling only)
+- A **Google Gemini API key** — get one free at [Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ## Install
 
@@ -26,47 +21,57 @@ A single-page CV generator with real-time preview, localStorage persistence, and
 npm install
 ```
 
-## Quick Start
+## API Key Configuration
 
-### Option 1: Open directly
+There are two ways to provide your Gemini API key:
+
+### Option A: Enter in the App
+
+Type or paste your key into the **Gemini API Key** field on the form. The key is only used for the current request and is never stored.
+
+### Option B: config.js File (Development Convenience)
+
+1. Copy the example config:
+   ```bash
+   cp src/config.example.js src/config.js
+   ```
+
+2. Edit `src/config.js` and replace `YOUR_GEMINI_API_KEY_HERE` with your actual key.
+
+3. Add the script tag to `src/index.html` before `api.js`:
+   ```html
+   <script src="config.js"></script>
+   ```
+
+> **Note:** `config.js` is gitignored — never commit real API keys.
+
+## Start / Run
 
 ```bash
-open index.html
-# or double-click index.html in your file explorer
-```
-
-### Option 2: Serve with npm
-
-```bash
+# Serve the app locally (opens at http://localhost:8080)
 npm start
 ```
 
-The app will be available at `http://localhost:8080`.
+Then open **http://localhost:8080/src/index.html** in your browser.
 
-### Option 3: Serve with any static server
+Alternatively, you can open `src/index.html` directly in your browser, or use any static file server:
 
 ```bash
-# Using Python 3
-python3 -m http.server 8080
-
-# Using Node.js (npx)
 npx serve .
-
-# Using VS Code Live Server extension
-# Right-click index.html → "Open with Live Server"
+# or
+npx http-server . -p 8080 -c-1 --cors
 ```
 
 ## Linting
 
 ```bash
-# Run all linters
 npm run lint
-
-# Run individually
-npm run lint:html    # HTMLHint
-npm run lint:css     # Stylelint
-npm run lint:js      # ESLint (checks test.js)
 ```
+
+Runs:
+- **HTMLHint** on `src/index.html`
+- **Stylelint** on `src/styles.css`
+- **ESLint** on `src/*.js` and `__tests__/*.js`
 
 ## Testing
 
@@ -74,63 +79,35 @@ npm run lint:js      # ESLint (checks test.js)
 npm test
 ```
 
-Runs the automated Puppeteer test suite. If Chrome/Chromium cannot launch (e.g., missing system libraries in CI/container environments), the test falls back to static HTML analysis covering 20+ structural checks (DOCTYPE, meta tags, Open Graph, JSON-LD, form sections, PDF generation, A4 dimensions, print media query, and more). Both modes produce a clear pass/fail report.
-
-## How to Use
-
-1. Open `index.html` in your browser
-2. Fill in your CV details — the preview updates in real time
-3. Your data is saved automatically to localStorage as you type
-4. Click **Download PDF** to export a single-page A4 PDF
-5. If your content is too long, the app auto-scales font/margins down to 8pt; a warning appears if content still overflows
-
-## PDF Auto-Scaling Logic
-
-| Parameter | Default | Floor |
-|-----------|---------|-------|
-| Font size | 14px | 8px (8pt) |
-| Padding | 60px | 10px |
-| Step decrement | 0.5px font / 5px padding per iteration | — |
-
-When **Download PDF** is clicked:
-1. The preview is cloned into an off-screen container
-2. `offsetHeight` is measured against A4 height (1122px)
-3. If content exceeds one page, font size and padding are reduced iteratively
-4. If the 8pt floor is reached, a console warning and toast notification alert the user
-5. The final scaled clone is rendered to PDF via html2pdf.js
-
-## Environment Variables
-
-None required. This is a fully client-side application.
+Runs the Jest test suite with jsdom. Covers:
+- **api.js**: Prompt construction, API call URL/body verification, success/error response handling (mocked fetch)
+- **app.js**: Form validation for required fields (company name, interviewer name)
 
 ## Project Structure
 
 ```
 .
-├── index.html         # The entire application (HTML + CSS + JS)
-├── package.json       # npm scripts and dev dependencies
-├── test.js            # Puppeteer test suite with static analysis fallback
-├── .eslintrc.json     # ESLint configuration
-├── .htmlhintrc        # HTMLHint configuration
-├── .stylelintrc.json  # Stylelint configuration
-└── README.md          # This file
+├── src/
+│   ├── index.html          # Main application page
+│   ├── styles.css          # Responsive styles
+│   ├── api.js              # Gemini API integration module
+│   ├── app.js              # Form handling, validation, UI orchestration
+│   └── config.example.js   # API key configuration template
+├── __tests__/
+│   ├── api.test.js         # Unit tests for api.js
+│   └── app.test.js         # Unit tests for app.js validation
+├── .eslintrc.json          # ESLint configuration
+├── .htmlhintrc             # HTMLHint configuration
+├── .stylelintrc.json       # Stylelint configuration
+├── .gitignore              # Git ignore rules
+├── package.json            # npm scripts and dependencies
+└── README.md               # This file
 ```
 
-## Tech Stack
+## Environment Variables
 
-- **HTML5** — semantic, accessible markup
-- **CSS3** — custom properties, flexbox, responsive design
-- **Vanilla JavaScript (ES5-compatible)** — no transpilation needed
-- **[html2pdf.js](https://github.com/eKoopmans/html2pdf.js)** (v0.10.1, CDN) — html2canvas + jsPDF wrapper for PDF generation
-
-## Offline Usage
-
-After the first successful page load, `html2pdf.bundle.min.js` is cached by the browser. Subsequent PDF downloads work without internet access. To verify: load the page once while online, then disconnect and click "Download PDF" — it should work.
+None required. This is a fully client-side application. The only external dependency is the Google Gemini API, accessed directly from the browser.
 
 ## License
 
-Internal use. Wipro associates.
-
-## Support
-
-For issues or feature requests, contact the GOFLOW development team.
+UNLICENSED — Private use.
