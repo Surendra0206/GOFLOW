@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Generate professional follow-up emails after job interviews using Google Gemini AI. Free, no sign-up required.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="GOFLOW — AI Interview Follow-Up Email Generator">
+  <meta property="og:description" content="Generate polished, personalized follow-up emails from your interview details using Google Gemini AI. Free to use.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://goflow.dev/email">
+  <meta property="og:image" content="https://goflow.dev/og-image-email.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GOFLOW — AI Interview Follow-Up Email Generator">
+  <meta name="twitter:description" content="Generate polished, personalized follow-up emails from your interview details using Google Gemini AI.">
+  <meta name="twitter:image" content="https://goflow.dev/og-image-email.png">
+  <link rel="canonical" href="https://goflow.dev/email">
+  <title>GOFLOW — AI Follow-Up Email Generator | Google Gemini Powered</title>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "GOFLOW Email Generator",
+    "url": "https://goflow.dev/email",
+    "description": "Generate professional follow-up emails after job interviews using Google Gemini AI.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-logo">GO<span>FLOW</span> <span class="app-tagline">Email Generator</span></div>
+    <div class="header-actions">
+      <button class="btn btn-outline" id="btnClear" title="Clear all fields">Clear Form</button>
+    </div>
+  </header>
+
+  <main class="app-container">
+    <!-- ===== FORM SECTION ===== -->
+    <section class="form-pane" id="formPane">
+      <div class="form-card">
+        <h2 class="form-card-title">Interview Details</h2>
+        <p class="form-card-subtitle">Fill in the details below and let AI craft a professional follow-up email.</p>
+
+        <!-- Error Banner -->
+        <div class="error-banner hidden" id="errorBanner" role="alert"></div>
+
+        <!-- Company Name -->
+        <div class="form-group">
+          <label for="companyName">Company Name <span class="required">*</span></label>
+          <input type="text" id="companyName" placeholder="e.g. Acme Corp" autocomplete="organization" required>
+          <span class="field-error hidden" id="companyNameError">Company name is required.</span>
+        </div>
+
+        <!-- Interviewer Name -->
+        <div class="form-group">
+          <label for="interviewerName">Interviewer Name <span class="required">*</span></label>
+          <input type="text" id="interviewerName" placeholder="e.g. Jane Smith" autocomplete="name" required>
+          <span class="field-error hidden" id="interviewerNameError">Interviewer name is required.</span>
+        </div>
+
+        <!-- Role / Position -->
+        <div class="form-group">
+          <label for="role">Role / Position</label>
+          <input type="text" id="role" placeholder="e.g. Senior Software Engineer" autocomplete="organization-title">
+        </div>
+
+        <!-- Interview Date -->
+        <div class="form-group">
+          <label for="interviewDate">Interview Date</label>
+          <input type="date" id="interviewDate">
+        </div>
+
+        <!-- Key Points Discussed -->
+        <div class="form-group">
+          <label for="keyPoints">Key Points Discussed</label>
+          <textarea id="keyPoints" rows="4" placeholder="Topics covered, your strengths, questions you asked, items you want to reiterate..."></textarea>
+        </div>
+
+        <!-- Tone -->
+        <div class="form-group">
+          <label for="tone">Tone Preference</label>
+          <select id="tone">
+            <option value="professional">Professional</option>
+            <option value="casual">Casual &amp; Friendly</option>
+            <option value="enthusiastic">Enthusiastic</option>
+            <option value="grateful">Grateful</option>
+          </select>
+        </div>
+
+        <!-- API Key -->
+        <div class="form-group">
+          <label for="apiKey">Gemini API Key</label>
+          <input type="password" id="apiKey" placeholder="Enter your Google Gemini API key" autocomplete="off">
+          <p class="field-hint">Your key is only used for this request. See <code>config.example.js</code> for setup instructions.</p>
+        </div>
+
+        <!-- Generate Button -->
+        <button class="btn btn-primary btn-generate" id="btnGenerate" type="submit">
+          <span class="btn-text">Generate Email</span>
+          <span class="btn-spinner hidden" id="generateSpinner" aria-label="Loading"></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== RESULT SECTION ===== -->
+    <section class="result-pane" id="resultPane">
+      <div class="result-card" id="resultCard">
+        <div class="result-placeholder" id="resultPlaceholder">
+          <div class="placeholder-icon" aria-hidden="true">&#9993;</div>
+          <h3>Your Follow-Up Email</h3>
+          <p>Fill in the interview details and click <strong>Generate Email</strong> to create a professional follow-up email powered by Google Gemini AI.</p>
+        </div>
+
+        <div class="result-content hidden" id="resultContent">
+          <div class="result-header">
+            <h3>Generated Email</h3>
+            <span class="result-badge">AI Generated</span>
+          </div>
+          <textarea class="email-output" id="emailOutput" rows="16" placeholder="Your generated email will appear here..." aria-label="Generated email draft (editable)"></textarea>
+          <p class="field-hint">You can edit the text above before copying.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
